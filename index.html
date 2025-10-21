@@ -509,7 +509,7 @@
 
         async function fetchGenres() {
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?select=parent_genre,subgenre&order=parent_genre.asc`, {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?select=parent_genre,subgenre&order=parent_genre.asc&limit=1000`, {
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -518,6 +518,8 @@
                 
                 if (!response.ok) throw new Error('Failed to fetch genres');
                 const data = await response.json();
+                
+                console.log('Fetched genres:', data.length, 'items');
                 
                 // Group by parent genre
                 const genreMap = {};
@@ -528,6 +530,7 @@
                     genreMap[item.parent_genre].add(item.subgenre);
                 });
                 
+                console.log('Genre map:', Object.keys(genreMap));
                 return genreMap;
             } catch (error) {
                 console.error('Error fetching genres:', error);
@@ -555,30 +558,45 @@
 
         async function fetchBooksByParentGenre(parentGenre) {
             try {
-                // Get books that have subgenres belonging to this parent genre
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/books?select=*&limit=1000`, {
+                console.log('Fetching books for parent genre:', parentGenre);
+                
+                // Get all books that have genre matches with this parent genre
+                const genreMatches = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?parent_genre=eq.${encodeURIComponent(parentGenre)}&select=book_id&limit=1000`, {
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`
                     }
                 });
                 
-                if (!response.ok) throw new Error('Failed to fetch books');
-                const allBooks = await response.json();
+                if (!genreMatches.ok) {
+                    console.error('Failed to fetch genre matches:', genreMatches.status);
+                    return [];
+                }
                 
-                // Filter books that have this parent genre in their genre matches
-                const genreMatches = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?parent_genre=eq.${encodeURIComponent(parentGenre)}&select=book_id`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
-                });
-                
-                if (!genreMatches.ok) return allBooks;
                 const matches = await genreMatches.json();
-                const bookIds = new Set(matches.map(m => m.book_id));
+                console.log('Found', matches.length, 'genre matches for', parentGenre);
                 
-                return allBooks.filter(book => bookIds.has(book.id));
+                if (matches.length === 0) return [];
+                
+                // Get unique book IDs
+                const bookIds = [...new Set(matches.map(m => m.book_id))];
+                console.log('Unique book IDs:', bookIds.length);
+                
+                // Fetch books for these IDs
+                const bookPromises = bookIds.map(bookId => 
+                    fetch(`${SUPABASE_URL}/rest/v1/books?id=eq.${bookId}&select=*`, {
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        }
+                    }).then(res => res.json())
+                );
+                
+                const bookResults = await Promise.all(bookPromises);
+                const books = bookResults.flat().filter(book => book.id);
+                
+                console.log('Found', books.length, 'books for parent genre', parentGenre);
+                return books;
             } catch (error) {
                 console.error('Error fetching books by parent genre:', error);
                 return [];
