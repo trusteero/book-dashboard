@@ -537,6 +537,7 @@
 
         async function fetchBooksByGenre(genre) {
             try {
+                // First, get all books that have this genre as their top_genre
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/books?top_genre=eq.${encodeURIComponent(genre)}&limit=1000`, {
                     headers: {
                         'apikey': SUPABASE_KEY,
@@ -548,6 +549,38 @@
                 return await response.json();
             } catch (error) {
                 console.error('Error fetching books by genre:', error);
+                return [];
+            }
+        }
+
+        async function fetchBooksByParentGenre(parentGenre) {
+            try {
+                // Get books that have subgenres belonging to this parent genre
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/books?select=*&limit=1000`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch books');
+                const allBooks = await response.json();
+                
+                // Filter books that have this parent genre in their genre matches
+                const genreMatches = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?parent_genre=eq.${encodeURIComponent(parentGenre)}&select=book_id`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!genreMatches.ok) return allBooks;
+                const matches = await genreMatches.json();
+                const bookIds = new Set(matches.map(m => m.book_id));
+                
+                return allBooks.filter(book => bookIds.has(book.id));
+            } catch (error) {
+                console.error('Error fetching books by parent genre:', error);
                 return [];
             }
         }
@@ -709,7 +742,7 @@
             
             const genreHTML = Object.entries(genres).map(([parentGenre, subgenres]) => `
                 <div class="genre-category">
-                    <h3>${parentGenre}</h3>
+                    <h3 onclick="showBooksByParentGenre('${parentGenre}')" style="cursor: pointer; color: #667eea;">${parentGenre} (${Array.from(subgenres).length} subgenres)</h3>
                     <div class="genre-list">
                         ${Array.from(subgenres).map(subgenre => 
                             `<span class="genre-tag" onclick="showBooksByGenre('${subgenre}')">${subgenre}</span>`
@@ -734,6 +767,22 @@
                 displayBooksByGenre(books, genre);
             } catch (error) {
                 container.innerHTML = '<div class="error">Error loading books for this genre</div>';
+            }
+        }
+
+        async function showBooksByParentGenre(parentGenre) {
+            // Show books by parent genre section
+            document.getElementById('genre-browser').classList.remove('active');
+            document.getElementById('books-by-genre').classList.add('active');
+            
+            const container = document.getElementById('genre-books-container');
+            container.innerHTML = '<div class="loading">Loading books for this genre category...</div>';
+            
+            try {
+                const books = await fetchBooksByParentGenre(parentGenre);
+                displayBooksByGenre(books, parentGenre);
+            } catch (error) {
+                container.innerHTML = '<div class="error">Error loading books for this genre category</div>';
             }
         }
 
