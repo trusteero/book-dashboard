@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gutenberg Book Analysis Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .search-section {
+            padding: 30px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .search-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            padding: 30px;
+        }
+
+        .book-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .book-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .book-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .book-genre {
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .book-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .book-details {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .book-details-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            margin: 20px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .genre-list {
+            margin-top: 20px;
+        }
+
+        .genre-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .genre-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .genre-score {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .books-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Gutenberg Book Analysis</h1>
+            <p>Explore 695+ books with AI-powered genre classification</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-books">-</div>
+                <div class="stat-label">Total Books</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="processed-today">-</div>
+                <div class="stat-label">Processed Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="genres-found">485</div>
+                <div class="stat-label">Subgenres</div>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" class="search-input" id="search-input" placeholder="Search books by title...">
+                <button class="search-btn" onclick="searchBooks()">🔍 Search</button>
+            </div>
+        </div>
+
+        <div id="books-container">
+            <div class="loading">Loading books...</div>
+        </div>
+    </div>
+
+    <div class="book-details" id="book-details">
+        <div class="book-details-content">
+            <button class="close-btn" onclick="closeBookDetails()">×</button>
+            <div id="book-details-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://jsmgsojqgtvhoiagjegf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzbWdzb2pxZ3R2aG9pYWdqZWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDE2NzYsImV4cCI6MjA3NjU3NzY3Nn0.WNIWaFKqw1D39utLMBR_b_24PjW0mHDe6Zy6b-gIeP0';
+
+        // API functions
+        async function fetchBooks(search = '', limit = 50) {
+            try {
+                let url = `${SUPABASE_URL}/rest/v1/books?limit=${limit}&order=processed_at.desc`;
+                if (search) {
+                    url += `&book_title=ilike.*${encodeURIComponent(search)}*`;
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch books');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching books:', error);
+                return [];
+            }
+        }
+
+        async function fetchBookDetails(bookId) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/books?id=eq.${bookId}`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch book details');
+                const books = await response.json();
+                return books[0] || null;
+            } catch (error) {
+                console.error('Error fetching book details:', error);
+                return null;
+            }
+        }
+
+        async function fetchGenreMatches(bookId) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?book_id=eq.${bookId}&order=rank.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch genre matches');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching genre matches:', error);
+                return [];
+            }
+        }
+
+        // Display functions
+        function displayBooks(books) {
+            const container = document.getElementById('books-container');
+            
+            if (books.length === 0) {
+                container.innerHTML = '<div class="error">No books found. Try a different search.</div>';
+                return;
+            }
+
+            const booksHTML = books.map(book => `
+                <div class="book-card" onclick="showBookDetails(${book.id})">
+                    <div class="book-title">${book.book_title || 'Untitled'}</div>
+                    <div class="book-meta">
+                        ${book.author ? `Author: ${book.author}` : ''}
+                        ${book.language ? ` • Language: ${book.language}` : ''}
+                        ${book.processed_at ? ` • Processed: ${new Date(book.processed_at).toLocaleDateString()}` : ''}
+                    </div>
+                    ${book.top_genre ? `<div class="book-genre">${book.top_genre}</div>` : ''}
+                    <div class="book-stats">
+                        <span>Chunks: ${book.total_chunks || 0}</span>
+                        <span>Score: ${book.top_genre_score ? (book.top_genre_score * 100).toFixed(1) + '%' : 'N/A'}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = booksHTML;
+        }
+
+        async function showBookDetails(bookId) {
+            const detailsModal = document.getElementById('book-details');
+            const content = document.getElementById('book-details-content');
+            
+            content.innerHTML = '<div class="loading">Loading book details...</div>';
+            detailsModal.style.display = 'flex';
+
+            try {
+                const book = await fetchBookDetails(bookId);
+                const genreMatches = await fetchGenreMatches(bookId);
+
+                if (!book) {
+                    content.innerHTML = '<div class="error">Book not found</div>';
+                    return;
+                }
+
+                const genreHTML = genreMatches.slice(0, 10).map(genre => `
+                    <div class="genre-item">
+                        <div>
+                            <div class="genre-name">${genre.subgenre}</div>
+                            <div style="font-size: 0.9rem; color: #6c757d;">${genre.parent_genre}</div>
+                        </div>
+                        <div class="genre-score">${(genre.avg_similarity * 100).toFixed(1)}%</div>
+                    </div>
+                `).join('');
+
+                content.innerHTML = `
+                    <h2>${book.book_title || 'Untitled'}</h2>
+                    <div style="margin: 20px 0; color: #6c757d;">
+                        ${book.author ? `<strong>Author:</strong> ${book.author}<br>` : ''}
+                        ${book.language ? `<strong>Language:</strong> ${book.language}<br>` : ''}
+                        ${book.processed_at ? `<strong>Processed:</strong> ${new Date(book.processed_at).toLocaleString()}<br>` : ''}
+                        ${book.total_chunks ? `<strong>Total Chunks:</strong> ${book.total_chunks}<br>` : ''}
+                        ${book.text_length ? `<strong>Text Length:</strong> ${book.text_length.toLocaleString()} characters<br>` : ''}
+                    </div>
+                    ${book.top_genre ? `<div class="book-genre" style="margin: 20px 0;">Top Genre: ${book.top_genre} (${(book.top_genre_score * 100).toFixed(1)}%)</div>` : ''}
+                    <h3>Genre Analysis</h3>
+                    <div class="genre-list">
+                        ${genreHTML || '<p>No genre matches found.</p>'}
+                    </div>
+                `;
+            } catch (error) {
+                content.innerHTML = '<div class="error">Error loading book details</div>';
+            }
+        }
+
+        function closeBookDetails() {
+            document.getElementById('book-details').style.display = 'none';
+        }
+
+        function searchBooks() {
+            const searchTerm = document.getElementById('search-input').value;
+            loadBooks(searchTerm);
+        }
+
+        async function loadBooks(search = '') {
+            const container = document.getElementById('books-container');
+            container.innerHTML = '<div class="loading">Loading books...</div>';
+
+            try {
+                const books = await fetchBooks(search);
+                displayBooks(books);
+                
+                // Update stats
+                document.getElementById('total-books').textContent = books.length;
+                document.getElementById('processed-today').textContent = books.filter(book => {
+                    const today = new Date();
+                    const bookDate = new Date(book.processed_at);
+                    return bookDate.toDateString() === today.toDateString();
+                }).length;
+            } catch (error) {
+                container.innerHTML = '<div class="error">Error loading books. Please try again.</div>';
+            }
+        }
+
+        // Event listeners
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBooks();
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('book-details').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBookDetails();
+            }
+        });
+
+        // Load books on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBooks();
+        });
+    </script>
+</body>
+</html>
