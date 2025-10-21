@@ -312,7 +312,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzbWdzb2pxZ3R2aG9pYWdqZWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDE2NzYsImV4cCI6MjA3NjU3NzY3Nn0.WNIWaFKqw1D39utLMBR_b_24PjW0mHDe6Zy6b-gIeP0';
 
         // API functions
-        async function fetchBooks(search = '', limit = 50) {
+        async function fetchBooks(search = '', limit = 1000) {
             try {
                 let url = `${SUPABASE_URL}/rest/v1/books?limit=${limit}&order=processed_at.desc`;
                 if (search) {
@@ -366,6 +366,24 @@
             } catch (error) {
                 console.error('Error fetching genre matches:', error);
                 return [];
+            }
+        }
+
+        async function fetchTotalBooks() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/books?select=count`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch total count');
+                const data = await response.json();
+                return data[0]?.count || 0;
+            } catch (error) {
+                console.error('Error fetching total count:', error);
+                return 0;
             }
         }
 
@@ -460,8 +478,9 @@
                 const books = await fetchBooks(search);
                 displayBooks(books);
                 
-                // Update stats
-                document.getElementById('total-books').textContent = books.length;
+                // Update stats - show actual count from API
+                const totalCount = await fetchTotalBooks();
+                document.getElementById('total-books').textContent = totalCount;
                 document.getElementById('processed-today').textContent = books.filter(book => {
                     const today = new Date();
                     const bookDate = new Date(book.processed_at);
