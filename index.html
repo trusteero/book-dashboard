@@ -218,58 +218,98 @@
             background: #5a6fd8;
         }
 
-        .books-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-            padding: 30px;
+        .books-list {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin: 20px;
         }
 
-        .book-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            border: 1px solid #e9ecef;
-            transition: transform 0.3s, box-shadow 0.3s;
+        .book-row {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background 0.2s;
             cursor: pointer;
         }
 
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        .book-row:hover {
+            background: #f8f9fa;
+        }
+
+        .book-row:last-child {
+            border-bottom: none;
+        }
+
+        .book-info {
+            flex: 1;
+            min-width: 0;
         }
 
         .book-title {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 600;
             color: #2c3e50;
-            margin-bottom: 10px;
-            line-height: 1.4;
+            margin-bottom: 4px;
+            line-height: 1.3;
         }
 
         .book-meta {
             color: #6c757d;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
         }
 
-        .book-genre {
-            background: #667eea;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+        .book-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .genre-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
             font-weight: 500;
-            display: inline-block;
-            margin-bottom: 10px;
         }
 
         .book-stats {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: flex-end;
+            min-width: 120px;
+            text-align: right;
+        }
+
+        .confidence-score {
             font-size: 0.9rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .confidence-bar {
+            width: 80px;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+            transition: width 0.3s ease;
+        }
+
+        .chunk-info {
+            font-size: 0.8rem;
             color: #6c757d;
+            margin-top: 2px;
         }
 
         .loading {
@@ -357,8 +397,16 @@
                 font-size: 2rem;
             }
             
-            .books-grid {
-                grid-template-columns: 1fr;
+            .book-row {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 15px;
+            }
+            
+            .book-stats {
+                align-items: flex-start;
+                margin-top: 10px;
+                min-width: auto;
             }
             
             .search-box {
@@ -654,21 +702,32 @@
                 return;
             }
 
-            const booksHTML = books.map(book => `
-                <div class="book-card" onclick="showBookDetails(${book.id})">
-                    <div class="book-title">${book.book_title || 'Untitled'}</div>
-                    <div class="book-meta">
-                        ${book.author ? `Author: ${book.author}` : ''}
-                        ${book.language ? ` • Language: ${book.language}` : ''}
-                        ${book.processed_at ? ` • Processed: ${new Date(book.processed_at).toLocaleDateString()}` : ''}
-                    </div>
-                    ${book.top_genre ? `<div class="book-genre">${book.top_genre}</div>` : ''}
-                    <div class="book-stats">
-                        <span>Chunks: ${book.total_chunks || 0}</span>
-                        <span>Score: ${book.top_genre_score ? (book.top_genre_score * 100).toFixed(1) + '%' : 'N/A'}</span>
-                    </div>
+            const booksHTML = `
+                <div class="books-list">
+                    ${books.map(book => `
+                        <div class="book-row" onclick="showBookDetails(${book.id})">
+                            <div class="book-info">
+                                <div class="book-title">${book.book_title || 'Untitled'}</div>
+                                <div class="book-meta">
+                                    ${book.author ? `Author: ${book.author}` : ''}
+                                    ${book.language ? ` • Language: ${book.language}` : ''}
+                                    ${book.processed_at ? ` • Processed: ${new Date(book.processed_at).toLocaleDateString()}` : ''}
+                                </div>
+                                <div class="book-genres">
+                                    ${book.top_genre ? `<span class="genre-tag">${book.top_genre}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="book-stats">
+                                <div class="confidence-score">${book.top_genre_score ? (book.top_genre_score * 100).toFixed(1) + '%' : 'N/A'}</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${book.top_genre_score ? (book.top_genre_score * 100) : 0}%"></div>
+                                </div>
+                                <div class="chunk-info">${book.total_chunks || 0} chunks</div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-            `).join('');
+            `;
 
             container.innerHTML = booksHTML;
         }
@@ -858,19 +917,26 @@
 
             const booksHTML = `
                 <h2 style="margin-bottom: 20px; color: #2c3e50;">Books in "${genre}" (${books.length} found)</h2>
-                <div class="books-grid">
+                <div class="books-list">
                     ${books.map(book => `
-                        <div class="book-card" onclick="showBookDetails(${book.id})">
-                            <div class="book-title">${book.book_title || 'Untitled'}</div>
-                            <div class="book-meta">
-                                ${book.author ? `Author: ${book.author}` : ''}
-                                ${book.language ? ` • Language: ${book.language}` : ''}
-                                ${book.processed_at ? ` • Processed: ${new Date(book.processed_at).toLocaleDateString()}` : ''}
+                        <div class="book-row" onclick="showBookDetails(${book.id})">
+                            <div class="book-info">
+                                <div class="book-title">${book.book_title || 'Untitled'}</div>
+                                <div class="book-meta">
+                                    ${book.author ? `Author: ${book.author}` : ''}
+                                    ${book.language ? ` • Language: ${book.language}` : ''}
+                                    ${book.processed_at ? ` • Processed: ${new Date(book.processed_at).toLocaleDateString()}` : ''}
+                                </div>
+                                <div class="book-genres">
+                                    ${book.top_genre ? `<span class="genre-tag">${book.top_genre}</span>` : ''}
+                                </div>
                             </div>
-                            <div class="book-genre">${book.top_genre}</div>
                             <div class="book-stats">
-                                <span>Chunks: ${book.total_chunks || 0}</span>
-                                <span>Score: ${book.top_genre_score ? (book.top_genre_score * 100).toFixed(1) + '%' : 'N/A'}</span>
+                                <div class="confidence-score">${book.top_genre_score ? (book.top_genre_score * 100).toFixed(1) + '%' : 'N/A'}</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${book.top_genre_score ? (book.top_genre_score * 100) : 0}%"></div>
+                                </div>
+                                <div class="chunk-info">${book.total_chunks || 0} chunks</div>
                             </div>
                         </div>
                     `).join('')}
