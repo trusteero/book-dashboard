@@ -553,16 +553,45 @@
 
         async function fetchBooksByGenre(genre) {
             try {
-                // First, get all books that have this genre as their top_genre
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/books?top_genre=eq.${encodeURIComponent(genre)}&limit=1000`, {
+                console.log('Fetching books for subgenre:', genre);
+                
+                // Get all books that have this subgenre in their genre matches
+                const genreMatches = await fetch(`${SUPABASE_URL}/rest/v1/genre_matches?subgenre=eq.${encodeURIComponent(genre)}&select=book_id&limit=1000`, {
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`
                     }
                 });
                 
-                if (!response.ok) throw new Error('Failed to fetch books by genre');
-                return await response.json();
+                if (!genreMatches.ok) {
+                    console.error('Failed to fetch genre matches:', genreMatches.status);
+                    return [];
+                }
+                
+                const matches = await genreMatches.json();
+                console.log('Found', matches.length, 'genre matches for subgenre', genre);
+                
+                if (matches.length === 0) return [];
+                
+                // Get unique book IDs
+                const bookIds = [...new Set(matches.map(m => m.book_id))];
+                console.log('Unique book IDs:', bookIds.length);
+                
+                // Fetch books for these IDs
+                const bookPromises = bookIds.map(bookId => 
+                    fetch(`${SUPABASE_URL}/rest/v1/books?id=eq.${bookId}&select=*`, {
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        }
+                    }).then(res => res.json())
+                );
+                
+                const bookResults = await Promise.all(bookPromises);
+                const books = bookResults.flat().filter(book => book.id);
+                
+                console.log('Found', books.length, 'books for subgenre', genre);
+                return books;
             } catch (error) {
                 console.error('Error fetching books by genre:', error);
                 return [];
